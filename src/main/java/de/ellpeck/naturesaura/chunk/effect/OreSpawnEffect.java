@@ -36,24 +36,19 @@ public class OreSpawnEffect implements IDrainSpotEffect {
     private int amount;
     private int dist;
 
-    private boolean calcValues(World world, BlockPos pos, Integer spot) {
-        if (spot <= 0)
+    private boolean calcValues(int aura) {
+        if (aura <= 1800000)
             return false;
-        int aura = IAuraChunk.getAuraInArea(world, pos, 30);
-        if (aura <= 2000000)
-            return false;
-        this.amount = Math.min(20, MathHelper.ceil(Math.abs(aura) / 300000F / IAuraChunk.getSpotAmountInArea(world, pos, 30)));
-        if (this.amount <= 0)
-            return false;
+        this.amount = Math.min(20, MathHelper.ceil(Math.abs(aura) / 300000F));
         this.dist = MathHelper.clamp(Math.abs(aura) / 150000, 5, 20);
         return true;
     }
 
     @Override
-    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(player.world, pos, spot))
+    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (!this.calcValues(aura))
             return -1;
-        if (player.getDistanceSq(pos) > this.dist * this.dist)
+        if (IDrainSpotEffect.isInChunk(player, chunk))
             return -1;
         if (!NaturesAuraAPI.instance().isEffectPowderActive(player.world, player.getPosition(), NAME))
             return 0;
@@ -66,10 +61,10 @@ public class OreSpawnEffect implements IDrainSpotEffect {
     }
 
     @Override
-    public void update(World world, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
+    public void update(World world, Chunk chunk, IAuraChunk auraChunk, int aura) {
         if (world.getTotalWorldTime() % 40 != 0)
             return;
-        if (!this.calcValues(world, pos, spot))
+        if (!this.calcValues(aura))
             return;
         IAuraType type = auraChunk.getType();
         Block requiredBlock;
@@ -84,7 +79,7 @@ public class OreSpawnEffect implements IDrainSpotEffect {
         int totalWeight = WeightedRandom.getTotalWeight(ores);
 
         List<Tuple<Vec3d, Integer>> powders = NaturesAuraAPI.instance().getActiveEffectPowders(world,
-                new AxisAlignedBB(pos).grow(this.dist), NAME);
+                new AxisAlignedBB(new BlockPos(chunk.x << 4, 0, chunk.z << 4), new BlockPos(chunk.x << 4 + 15, 255, chunk.z << 4 + 15)), NAME);
         if (powders.isEmpty())
             return;
         for (int i = 0; i < this.amount; i++) {
@@ -95,8 +90,7 @@ public class OreSpawnEffect implements IDrainSpotEffect {
             int y = MathHelper.floor(powderPos.y + world.rand.nextGaussian() * range);
             int z = MathHelper.floor(powderPos.z + world.rand.nextGaussian() * range);
             BlockPos orePos = new BlockPos(x, y, z);
-            if (orePos.distanceSq(powderPos.x, powderPos.y, powderPos.z) <= range * range
-                    && orePos.distanceSq(pos) <= this.dist * this.dist && world.isBlockLoaded(orePos)) {
+            if (orePos.distanceSq(powderPos.x, powderPos.y, powderPos.z) <= range * range && world.isBlockLoaded(orePos)) {
                 IBlockState state = world.getBlockState(orePos);
                 Block block = state.getBlock();
                 if (block != requiredBlock)
@@ -114,7 +108,7 @@ public class OreSpawnEffect implements IDrainSpotEffect {
                             continue;
 
                         FakePlayer player = FakePlayerFactory.getMinecraft((WorldServer) world);
-                        IBlockState stateToPlace = toPlace.getStateForPlacement(world, pos, EnumFacing.UP, 0, 0, 0, stack.getMetadata(), player, EnumHand.MAIN_HAND);
+                        IBlockState stateToPlace = toPlace.getStateForPlacement(world, orePos, EnumFacing.UP, 0, 0, 0, stack.getMetadata(), player, EnumHand.MAIN_HAND);
                         if (SPAWN_EXCEPTIONS.contains(stateToPlace))
                             continue;
 
@@ -122,7 +116,7 @@ public class OreSpawnEffect implements IDrainSpotEffect {
                         world.playEvent(2001, orePos, Block.getStateId(stateToPlace));
 
                         int toDrain = (20000 - ore.itemWeight * 2) * 2;
-                        BlockPos highestSpot = IAuraChunk.getHighestSpot(world, orePos, 30, pos);
+                        BlockPos highestSpot = IAuraChunk.getHighestSpot(world, orePos, 30, orePos);
                         IAuraChunk.getAuraChunk(world, highestSpot).drainAura(highestSpot, toDrain);
                         break outer;
                     }

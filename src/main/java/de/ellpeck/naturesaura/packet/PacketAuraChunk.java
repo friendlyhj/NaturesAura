@@ -22,12 +22,12 @@ public class PacketAuraChunk implements IMessage {
 
     private int chunkX;
     private int chunkZ;
-    private Map<BlockPos, MutableInt> drainSpots;
+    private int aura;
 
-    public PacketAuraChunk(int chunkX, int chunkZ, Map<BlockPos, MutableInt> drainSpots) {
+    public PacketAuraChunk(int chunkX, int chunkZ, int aura) {
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
-        this.drainSpots = drainSpots;
+        this.aura = aura;
     }
 
     public PacketAuraChunk() {
@@ -38,27 +38,14 @@ public class PacketAuraChunk implements IMessage {
     public void fromBytes(ByteBuf buf) {
         this.chunkX = buf.readInt();
         this.chunkZ = buf.readInt();
-
-        this.drainSpots = new HashMap<>();
-        int amount = buf.readInt();
-        for (int i = 0; i < amount; i++) {
-            this.drainSpots.put(
-                    BlockPos.fromLong(buf.readLong()),
-                    new MutableInt(buf.readInt())
-            );
-        }
+        this.aura = buf.readInt();
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
         buf.writeInt(this.chunkX);
         buf.writeInt(this.chunkZ);
-
-        buf.writeInt(this.drainSpots.size());
-        for (Map.Entry<BlockPos, MutableInt> entry : this.drainSpots.entrySet()) {
-            buf.writeLong(entry.getKey().toLong());
-            buf.writeInt(entry.getValue().intValue());
-        }
+        buf.writeInt(this.aura);
     }
 
     public static class Handler implements IMessageHandler<PacketAuraChunk, IMessage> {
@@ -72,7 +59,7 @@ public class PacketAuraChunk implements IMessage {
                     Chunk chunk = world.getChunk(message.chunkX, message.chunkZ);
                     if (chunk.hasCapability(NaturesAuraAPI.capAuraChunk, null)) {
                         AuraChunk auraChunk = (AuraChunk) chunk.getCapability(NaturesAuraAPI.capAuraChunk, null);
-                        auraChunk.setSpots(message.drainSpots);
+                        auraChunk.setAura(message.aura);
                     }
                 }
             });

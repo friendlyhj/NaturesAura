@@ -26,26 +26,21 @@ public class PlantBoostEffect implements IDrainSpotEffect {
     public static final ResourceLocation NAME = new ResourceLocation(NaturesAura.MOD_ID, "plant_boost");
 
     private int amount;
-    private int dist;
 
-    private boolean calcValues(World world, BlockPos pos, Integer spot) {
-        if (spot <= 0)
-            return false;
-        int aura = IAuraChunk.getAuraInArea(world, pos, 30);
+    private boolean calcValues(int aura) {
         if (aura < 1500000)
             return false;
-        this.amount = Math.min(45, MathHelper.ceil(Math.abs(aura) / 100000F / IAuraChunk.getSpotAmountInArea(world, pos, 30)));
+        this.amount = Math.min(45, MathHelper.ceil(Math.abs(aura) / 100000F));
         if (this.amount <= 1)
             return false;
-        this.dist = MathHelper.clamp(Math.abs(aura) / 150000, 5, 35);
         return true;
     }
 
     @Override
-    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(player.world, pos, spot))
+    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (!this.calcValues(aura))
             return -1;
-        if (player.getDistanceSq(pos) > this.dist * this.dist)
+        if (!IDrainSpotEffect.isInChunk(player, chunk))
             return -1;
         if (NaturesAuraAPI.instance().isEffectPowderActive(player.world, player.getPosition(), NAME))
             return 0;
@@ -58,14 +53,14 @@ public class PlantBoostEffect implements IDrainSpotEffect {
     }
 
     @Override
-    public void update(World world, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(world, pos, spot))
+    public void update(World world, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (!this.calcValues(aura))
             return;
         for (int i = this.amount / 2 + world.rand.nextInt(this.amount / 2); i >= 0; i--) {
-            int x = MathHelper.floor(pos.getX() + world.rand.nextGaussian() * this.dist);
-            int z = MathHelper.floor(pos.getZ() + world.rand.nextGaussian() * this.dist);
+            int x = chunk.x << 4 + world.rand.nextInt(16);
+            int z = chunk.z << 4 + world.rand.nextInt(16);
             BlockPos plantPos = new BlockPos(x, world.getHeight(x, z), z);
-            if (plantPos.distanceSq(pos) <= this.dist * this.dist && world.isBlockLoaded(plantPos)) {
+            if (world.isBlockLoaded(plantPos)) {
                 if (NaturesAuraAPI.instance().isEffectPowderActive(world, plantPos, NAME))
                     continue;
 
@@ -77,7 +72,7 @@ public class PlantBoostEffect implements IDrainSpotEffect {
                     if (growable.canGrow(world, plantPos, state, false)) {
                         growable.grow(world, world.rand, plantPos, state);
 
-                        BlockPos closestSpot = IAuraChunk.getHighestSpot(world, plantPos, 25, pos);
+                        BlockPos closestSpot = IAuraChunk.getHighestSpot(world, plantPos, 25, plantPos);
                         IAuraChunk.getAuraChunk(world, closestSpot).drainAura(closestSpot, 3500);
 
                         PacketHandler.sendToAllAround(world, plantPos, 32,

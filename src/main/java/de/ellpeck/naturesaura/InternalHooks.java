@@ -136,7 +136,7 @@ public class InternalHooks implements NaturesAuraAPI.IInternalHooks {
     @Override
     public void getAuraSpotsInArea(World world, BlockPos pos, int radius, BiConsumer<BlockPos, Integer> consumer) {
         world.profiler.func_194340_a(() -> NaturesAura.MOD_ID + ":getSpotsInArea");
-        Helper.getAuraChunksInArea(world, pos, radius, chunk -> chunk.getSpotsInArea(pos, radius, consumer));
+        Helper.getAuraChunksInArea(world, pos, radius, chunk -> chunk.getSpotsInArea(consumer));
         world.profiler.endSection();
     }
 

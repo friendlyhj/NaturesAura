@@ -6,6 +6,7 @@ import de.ellpeck.naturesaura.api.NaturesAuraAPI;
 import de.ellpeck.naturesaura.api.aura.chunk.IAuraChunk;
 import de.ellpeck.naturesaura.api.aura.chunk.IDrainSpotEffect;
 import de.ellpeck.naturesaura.api.aura.type.IAuraType;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.passive.EntityChicken;
@@ -13,15 +14,16 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemEgg;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ClassInheritanceMultiMap;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.fml.relauncher.ReflectionHelper;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -31,27 +33,21 @@ public class AnimalEffect implements IDrainSpotEffect {
     public static final ResourceLocation NAME = new ResourceLocation(NaturesAura.MOD_ID, "animal");
 
     private int chance;
-    private AxisAlignedBB bb;
 
-    private boolean calcValues(World world, BlockPos pos, Integer spot) {
-        if (spot <= 0)
-            return false;
-        int aura = IAuraChunk.getAuraInArea(world, pos, 30);
+    private boolean calcValues(int aura) {
         if (aura < 1500000)
             return false;
-        this.chance = Math.min(50, MathHelper.ceil(Math.abs(aura) / 500000F / IAuraChunk.getSpotAmountInArea(world, pos, 30)));
+        this.chance = Math.min(50, MathHelper.ceil(Math.abs(aura) / 500000F));
         if (this.chance <= 0)
             return false;
-        int dist = MathHelper.clamp(Math.abs(aura) / 150000, 5, 35);
-        this.bb = new AxisAlignedBB(pos).grow(dist);
         return true;
     }
 
     @Override
-    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(player.world, pos, spot))
+    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (!this.calcValues(aura))
             return -1;
-        if (!this.bb.contains(player.getPositionVector()))
+        if (!IDrainSpotEffect.isInChunk(player, chunk))
             return -1;
         if (!NaturesAuraAPI.instance().isEffectPowderActive(player.world, player.getPosition(), NAME))
             return 0;
@@ -64,16 +60,16 @@ public class AnimalEffect implements IDrainSpotEffect {
     }
 
     @Override
-    public void update(World world, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(world, pos, spot))
+    public void update(World world, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (!this.calcValues(aura))
             return;
 
-        List<EntityAnimal> animals = world.getEntitiesWithinAABB(EntityAnimal.class, this.bb);
+        List<EntityAnimal> animals = IDrainSpotEffect.getEntitiesInChunk(chunk, EntityAnimal.class);
         if (animals.size() >= 200)
             return;
 
         if (world.getTotalWorldTime() % 200 == 0) {
-            List<EntityItem> items = world.getEntitiesWithinAABB(EntityItem.class, this.bb);
+            List<EntityItem> items = IDrainSpotEffect.getEntitiesInChunk(chunk, EntityItem.class);
             for (EntityItem item : items) {
                 if (item.isDead)
                     continue;
@@ -99,9 +95,7 @@ public class AnimalEffect implements IDrainSpotEffect {
                 chicken.setGrowingAge(-24000);
                 chicken.setPosition(item.posX, item.posY, item.posZ);
                 world.spawnEntity(chicken);
-
-                BlockPos closestSpot = IAuraChunk.getHighestSpot(world, item.getPosition(), 35, pos);
-                IAuraChunk.getAuraChunk(world, closestSpot).drainAura(closestSpot, 2000);
+                auraChunk.drainAura(BlockPos.ORIGIN, 2000);
             }
         }
 
@@ -126,8 +120,7 @@ public class AnimalEffect implements IDrainSpotEffect {
             this.setInLove(first);
             this.setInLove(second);
 
-            BlockPos closestSpot = IAuraChunk.getHighestSpot(world, first.getPosition(), 35, pos);
-            IAuraChunk.getAuraChunk(world, closestSpot).drainAura(closestSpot, 3500);
+            auraChunk.drainAura(BlockPos.ORIGIN, 3500);
         }
     }
 

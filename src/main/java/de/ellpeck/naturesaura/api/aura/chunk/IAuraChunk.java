@@ -191,4 +191,6 @@ public interface IAuraChunk extends INBTSerializable<NBTTagCompound> {
     IAuraType getType();
 
     void markDirty();
+
+    int getAura();
 }

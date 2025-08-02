@@ -13,6 +13,7 @@ import de.ellpeck.naturesaura.blocks.BlockDimensionRail;
 import de.ellpeck.naturesaura.blocks.tiles.TileEntityGratedChute;
 import de.ellpeck.naturesaura.blocks.tiles.TileEntityNatureAltar;
 import de.ellpeck.naturesaura.blocks.tiles.TileEntityRFConverter;
+import de.ellpeck.naturesaura.chunk.AuraChunk;
 import de.ellpeck.naturesaura.compat.Compat;
 import de.ellpeck.naturesaura.compat.patchouli.PatchouliCompat;
 import de.ellpeck.naturesaura.items.ItemAuraCache;
@@ -89,14 +90,9 @@ public class ClientEvents {
             left.add(prefix + "P: " + (depth + noDepth) + " (D: " + depth + " nD: " + noDepth + ")");
 
             if (mc.player.capabilities.isCreativeMode) {
-                MutableInt amount = new MutableInt(IAuraChunk.DEFAULT_AURA);
-                MutableInt spots = new MutableInt();
-                IAuraChunk.getSpotsInArea(mc.world, mc.player.getPosition(), 35, (blockPos, drainSpot) -> {
-                    spots.increment();
-                    amount.add(drainSpot);
-                });
                 NumberFormat format = NumberFormat.getInstance();
-                left.add(prefix + "A: " + format.format(amount.intValue()) + " (S: " + spots.intValue() + ")");
+                int amount = IAuraChunk.getAuraChunk(mc.world, mc.player.getPosition()).getAura();
+                left.add(prefix + "A: " + format.format(amount));
                 left.add(prefix + "AT: " + IAuraType.forWorld(mc.world).getName());
             }
         }
@@ -336,7 +332,7 @@ public class ClientEvents {
                     if (!mc.gameSettings.showDebugInfo && (conf != 2 || !(mc.currentScreen instanceof GuiChat))) {
                         GlStateManager.color(83 / 255F, 160 / 255F, 8 / 255F);
 
-                        int totalAmount = IAuraChunk.triangulateAuraInArea(mc.world, mc.player.getPosition(), 35);
+                        int totalAmount = IAuraChunk.getAuraChunk(mc.world, mc.player.getPosition()).getAura();
                         float totalPercentage = totalAmount / (IAuraChunk.DEFAULT_AURA * 2F);
                         String text = I18n.format("info." + NaturesAura.MOD_ID + ".aura_in_area");
                         float textScale = 0.75F;

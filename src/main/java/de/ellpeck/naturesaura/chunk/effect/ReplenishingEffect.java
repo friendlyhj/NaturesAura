@@ -21,17 +21,16 @@ public class ReplenishingEffect implements IDrainSpotEffect {
     public static final ResourceLocation NAME = new ResourceLocation(NaturesAura.MOD_ID, "replenishing");
 
     @Override
-    public void update(World world, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (spot < 0) {
+    public void update(World world, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (aura < IAuraChunk.DEFAULT_AURA) {
             List<ISpotDrainable> tiles = new ArrayList<>();
-            Helper.getTileEntitiesInArea(world, pos, 25, tile -> {
+            chunk.getTileEntityMap().forEach((pos, tile) -> {
                 if (tile.hasCapability(NaturesAuraAPI.capAuraContainer, null)) {
                     IAuraContainer container = tile.getCapability(NaturesAuraAPI.capAuraContainer, null);
                     if (container instanceof ISpotDrainable) {
                         tiles.add((ISpotDrainable) container);
                     }
                 }
-                return false;
             });
             if (!tiles.isEmpty()) {
                 IAuraType type = IAuraType.forWorld(world);
@@ -39,12 +38,12 @@ public class ReplenishingEffect implements IDrainSpotEffect {
                     ISpotDrainable tile = tiles.get(world.rand.nextInt(tiles.size()));
                     if (!tile.isAcceptableType(type))
                         continue;
-                    int drained = tile.drainAuraPassively(-spot, false);
+                    int drained = tile.drainAuraPassively(IAuraChunk.DEFAULT_AURA - aura, false);
                     if (drained <= 0)
                         continue;
-                    auraChunk.storeAura(pos, drained);
-                    spot += drained;
-                    if (spot >= drained) {
+                    auraChunk.storeAura(BlockPos.ORIGIN, drained);
+                    aura += drained;
+                    if (aura >= IAuraChunk.DEFAULT_AURA) {
                         break;
                     }
                 }

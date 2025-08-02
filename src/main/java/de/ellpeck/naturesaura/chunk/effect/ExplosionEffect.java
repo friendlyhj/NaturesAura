@@ -5,6 +5,7 @@ import de.ellpeck.naturesaura.NaturesAura;
 import de.ellpeck.naturesaura.api.aura.chunk.IAuraChunk;
 import de.ellpeck.naturesaura.api.aura.chunk.IDrainSpotEffect;
 import de.ellpeck.naturesaura.api.aura.type.IAuraType;
+import jdk.nashorn.internal.ir.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
@@ -21,27 +22,24 @@ public class ExplosionEffect implements IDrainSpotEffect {
     private float strength;
     private int dist;
 
-    private boolean calcValues(World world, BlockPos pos, Integer spot){
-        if (spot >= 0)
+    private boolean calcValues(World world, int aura) {
+        if (aura > -IAuraChunk.DEFAULT_AURA / 2)
             return false;
-        int aura = IAuraChunk.getAuraInArea(world, pos, 85);
-        if (aura > -5000000)
-            return false;
-        int chance = 140 - Math.abs(aura) / 200000;
+        int chance = 140 - Math.abs(aura) / 20000;
         if (chance > 1 && world.rand.nextInt(chance) != 0)
             return false;
-        this.strength = Math.min(Math.abs(aura) / 5000000F, 5F);
+        this.strength = Math.min(Math.abs(aura) / 500000F, 5F);
         if (this.strength <= 0)
             return false;
-        this.dist = MathHelper.clamp(Math.abs(aura) / 200000, 25, 100);
+        this.dist = MathHelper.clamp(Math.abs(aura) / 20000, 25, 100);
         return true;
     }
 
     @Override
-    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(player.world, pos, spot))
+    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (aura > -IAuraChunk.DEFAULT_AURA / 2)
             return -1;
-        if (player.getDistanceSq(pos) > this.dist * this.dist)
+        if (!IDrainSpotEffect.isInChunk(player, chunk))
             return -1;
         return 1;
     }
@@ -52,11 +50,13 @@ public class ExplosionEffect implements IDrainSpotEffect {
     }
 
     @Override
-    public void update(World world, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
+    public void update(World world, Chunk chunk, IAuraChunk auraChunk, int aura) {
         if(world.getTotalWorldTime() % 40 != 0)
             return;
-        if(!this.calcValues(world, pos, spot))
+        if(!this.calcValues(world, aura))
             return;
+
+        BlockPos pos = new BlockPos(chunk.x << 4 + 7, chunk.getHeightValue(7, 7), chunk.z << 4 + 7);
 
         int x = MathHelper.floor(pos.getX() + world.rand.nextGaussian() * this.dist);
         int z = MathHelper.floor(pos.getZ() + world.rand.nextGaussian() * this.dist);

@@ -23,29 +23,17 @@ public class GrassDieEffect implements IDrainSpotEffect {
     public static final ResourceLocation NAME = new ResourceLocation(NaturesAura.MOD_ID, "grass_die");
 
     private int amount;
-    private int dist;
 
-    private boolean calcValues(World world, BlockPos pos, Integer spot) {
-        if (spot < 0) {
-            int aura = IAuraChunk.getAuraInArea(world, pos, 50);
-            if (aura < 0) {
-                this.amount = Math.min(300, MathHelper.ceil(Math.abs(aura) / 100000F / IAuraChunk.getSpotAmountInArea(world, pos, 50)));
-                if (this.amount > 1) {
-                    this.dist = MathHelper.clamp(Math.abs(aura) / 75000, 5, 75);
-                    return true;
-                }
-            }
+    private boolean calcValues(int aura) {
+        if (aura < 0) {
+            this.amount = Math.min(300, MathHelper.ceil(Math.abs(aura) / 10000F));
         }
         return false;
     }
 
     @Override
-    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(player.world, pos, spot))
-            return -1;
-        if (player.getDistanceSq(pos) > this.dist * this.dist)
-            return -1;
-        return 1;
+    public int isActiveHere(EntityPlayer player, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        return this.calcValues(aura) && IDrainSpotEffect.isInChunk(player, chunk) ? 1 : -1;
     }
 
     @Override
@@ -54,16 +42,18 @@ public class GrassDieEffect implements IDrainSpotEffect {
     }
 
     @Override
-    public void update(World world, Chunk chunk, IAuraChunk auraChunk, BlockPos pos, Integer spot) {
-        if (!this.calcValues(world, pos, spot))
+    public void update(World world, Chunk chunk, IAuraChunk auraChunk, int aura) {
+        if (!this.calcValues(aura))
             return;
         for (int i = this.amount / 2 + world.rand.nextInt(this.amount / 2); i >= 0; i--) {
+            int xInChunk = world.rand.nextInt(16);
+            int zInChunk = world.rand.nextInt(16);
             BlockPos grassPos = new BlockPos(
-                    pos.getX() + world.rand.nextGaussian() * this.dist,
-                    pos.getY() + world.rand.nextGaussian() * this.dist,
-                    pos.getZ() + world.rand.nextGaussian() * this.dist
+                    chunk.x << 4 + xInChunk,
+                    world.rand.nextInt(chunk.getHeightValue(xInChunk, zInChunk)),
+                    chunk.z << 4 + zInChunk
             );
-            if (grassPos.distanceSq(pos) <= this.dist * this.dist && world.isBlockLoaded(grassPos)) {
+            if (world.isBlockLoaded(grassPos)) {
                 IBlockState state = world.getBlockState(grassPos);
                 Block block = state.getBlock();
 
@@ -71,7 +61,8 @@ public class GrassDieEffect implements IDrainSpotEffect {
                 if (block instanceof BlockLeaves) {
                     newState = ModBlocks.DECAYED_LEAVES.getDefaultState();
                 } else if (block instanceof BlockGrass) {
-                    newState = Blocks.DIRT.getDefaultState().withProperty(BlockDirt.VARIANT, BlockDirt.DirtType.COARSE_DIRT);
+                    newState = Blocks.DIRT.getDefaultState()
+                            .withProperty(BlockDirt.VARIANT, BlockDirt.DirtType.COARSE_DIRT);
                 } else if (block instanceof BlockBush) {
                     newState = Blocks.AIR.getDefaultState();
                 }
