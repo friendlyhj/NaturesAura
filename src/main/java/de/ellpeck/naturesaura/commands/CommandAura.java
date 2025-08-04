@@ -51,10 +51,12 @@ public class CommandAura extends CommandBase {
             int range = parse(args, 1, -1);
             IAuraChunk.getSpotsInArea(world, pos, range, (spot, amount) -> {
                 IAuraChunk chunk = IAuraChunk.getAuraChunk(world, spot);
-                if (amount > 0)
-                    chunk.drainAura(spot, amount);
-                else
-                    chunk.storeAura(spot, -amount);
+                int aura = chunk.getAura();
+                if (aura > IAuraChunk.DEFAULT_AURA) {
+                    chunk.drainAura(spot, aura - IAuraChunk.DEFAULT_AURA);
+                } else {
+                    chunk.storeAura(spot, IAuraChunk.DEFAULT_AURA - aura);
+                }
             });
             sender.sendMessage(new TextComponentString("Reset Aura successfully"));
         } else {

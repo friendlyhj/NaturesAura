@@ -169,17 +169,8 @@ public class AuraChunk implements IAuraChunk {
 
     @Override
     public void deserializeNBT(NBTTagCompound compound) {
-        this.aura.set(compound.getInteger("aura"));
-
-        // old compat
-        NBTTagList list = compound.getTagList("drain_spots", 10);
-        if (!list.isEmpty()) {
-            int amount = 0;
-            for (NBTBase base : list) {
-                NBTTagCompound tag = (NBTTagCompound) base;
-                amount += tag.getInteger("amount");
-            }
-            this.aura.set(amount);
+        if (compound.hasKey("aura")) {
+            this.aura.set(compound.getInteger("aura"));
         }
     }
 
