@@ -98,7 +98,7 @@ public class AuraChunk implements IAuraChunk {
 
     @Override
     public int getDrainSpot(BlockPos pos) {
-        return aura.get();
+        return aura.get() - IAuraChunk.DEFAULT_AURA;
     }
 
     public void setAura(int aura) {
@@ -142,7 +142,7 @@ public class AuraChunk implements IAuraChunk {
     }
 
     public void getSpotsInArea(BiConsumer<BlockPos, Integer> consumer) {
-        consumer.accept(new BlockPos(chunk.x << 4, chunk.getWorld().getSeaLevel(), chunk.z << 4), aura.get());
+        consumer.accept(new BlockPos(chunk.x << 4, chunk.getWorld().getSeaLevel(), chunk.z << 4), aura.get() - IAuraChunk.DEFAULT_AURA);
     }
 
     public void getActiveEffectIcons(EntityPlayer player, Map<ResourceLocation, Tuple<ItemStack, Boolean>> icons) {
