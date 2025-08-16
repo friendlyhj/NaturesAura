@@ -15,12 +15,11 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.Tuple;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.items.IItemHandler;
-import org.apache.commons.lang3.mutable.MutableFloat;
-import org.apache.commons.lang3.mutable.MutableInt;
-import org.apache.commons.lang3.mutable.MutableObject;
+import org.apache.commons.lang3.mutable.*;
 import org.lwjgl.util.vector.Vector3f;
 
 import java.util.ArrayList;
@@ -149,19 +148,19 @@ public class InternalHooks implements NaturesAuraAPI.IInternalHooks {
 
     @Override
     public int getAuraInArea(World world, BlockPos pos, int radius) {
-        MutableInt result = new MutableInt(IAuraChunk.DEFAULT_AURA);
+        MutableLong result = new MutableLong(IAuraChunk.DEFAULT_AURA);
         this.getAuraSpotsInArea(world, pos, radius, (blockPos, drainSpot) -> result.add(drainSpot));
-        return result.intValue();
+        return (int) Math.min(Integer.MAX_VALUE, result.longValue());
     }
 
     @Override
     public int triangulateAuraInArea(World world, BlockPos pos, int radius) {
-        MutableFloat result = new MutableFloat(IAuraChunk.DEFAULT_AURA);
+        MutableDouble result = new MutableDouble(IAuraChunk.DEFAULT_AURA);
         IAuraChunk.getSpotsInArea(world, pos, radius, (blockPos, spot) -> {
-            float percentage = 1F - (float) pos.getDistance(blockPos.getX(), blockPos.getY(), blockPos.getZ()) / radius;
+            double percentage = 1F - pos.getDistance(blockPos.getX(), blockPos.getY(), blockPos.getZ()) / radius;
             result.add(spot * percentage);
         });
-        return result.intValue();
+        return (int) Math.min(Integer.MAX_VALUE, result.longValue());
     }
 
     @Override
